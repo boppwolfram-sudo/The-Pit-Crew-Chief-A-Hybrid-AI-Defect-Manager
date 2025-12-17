@@ -1,0 +1,97 @@
+modules:
+  action:
+    - key: find-link
+      name: Find Linked Requirement
+      function: findLink
+      description: Traces a defect description to the most relevant requirement using vector similarity.
+      inputs:
+        defectText:
+          title: Defect Description
+          type: string
+          description: The full text of the error log or bug description.
+          required: true
+      actionVerb: GET
+    
+    - key: diagnose-cause
+      name: Diagnose Root Cause
+      function: diagnoseCause
+      description: Analyzes the root cause by comparing defect data against requirement constraints.
+      inputs:
+        defectText:
+          title: Defect Log
+          type: string
+          description: The error message or observation.
+          required: true
+        requirementText:
+          title: Requirement Text
+          type: string
+          description: The text of the linked requirement.
+          required: true
+        latency:
+          title: Latency (ms)
+          type: integer
+          description: Optional observed latency in milliseconds.
+          required: false
+      actionVerb: GET
+
+    - key: recommend-assignee
+      name: Recommend Assignee
+      function: recommendAssignee
+      description: Recommends the best engineer to fix a bug based on history and availability.
+      inputs:
+        reqId:
+          title: Requirement ID
+          type: string
+          description: The ID of the requirement (e.g. REQ-101).
+          required: true
+      actionVerb: GET
+
+  rovo:agent:
+    - key: pit-crew-chief-agent
+      name: Pit Crew Chief
+      description: An AI Agent that manages defects by tracing them to requirements and assigning fixes.
+      prompt: >
+        You are "The Pit Crew Chief", a specialized AI Defect Manager for Williams Racing.
+        
+        Your Goal: Treat every Defect as a "Translation Error" between Requirements and Code.
+        
+        Your Workflow:
+        1. **TRACE**: When you see a bug report, FIRST use `find-link` to find the original Requirement. DO NOT guess.
+        2. **DIAGNOSE**: Once you have the Requirement, use `diagnose-cause` to check if it's a "Violated Constraint" or "Missing Spec".
+        3. **ASSIGN**: Finally, use `recommend-assignee` to find the best person to fix it.
+        
+        Tone: Professional, decisive, and data-driven. Use Formula 1 analogies where appropriate (e.g. "Box box", "Pit stop").
+        
+        Always output the "Confidence Score" provided by your tools.
+      conversationStarters:
+        - "Analyze this error: NullPointerException in PatientDAO"
+        - "Who should fix REQ-103?"
+        - "Trace this bug: Latency observed 1500ms in Auth"
+      actions:
+        - find-link
+        - diagnose-cause
+        - recommend-assignee
+
+  function:
+    - key: findLink
+      handler: index.findLinkedRequirement
+    - key: diagnoseCause
+      handler: index.analyzeRootCause
+    - key: recommendAssignee
+      handler: index.findAssignee
+
+app:
+  runtime:
+    name: nodejs20.x
+  id: ari:cloud:ecosystem::app/100e73ee-8baa-4cc2-aaff-9b0a4d2a01cc
+
+permissions:
+  scopes:
+    - write:jira-work
+    - read:jira-work
+    - storage:app
+  external:
+    fetch:
+      backend:
+        - "*.ngrok-free.app"
+        - "api.openai.com"
